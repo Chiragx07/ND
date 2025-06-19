@@ -1,8 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/colors';
+import { Circle, CheckCircle2 } from 'lucide-react-native';
+
+const paymentMethods = [
+  { id: 'upi', name: 'UPI' },
+  { id: 'card', name: 'Credit/Debit Card' },
+  { id: 'cash', name: 'Cash on Delivery' },
+];
 
 export default function MaidPaymentScreen() {
   const { vendorId, start, end, days, total } = useLocalSearchParams<{
@@ -13,44 +20,120 @@ export default function MaidPaymentScreen() {
     total: string;
   }>();
 
-  const handlePay = () => {
-    Alert.alert('Payment Successful', 'Your maid booking is confirmed!');
-    router.replace('/services/maid');
+  const [selectedMethod, setSelectedMethod] = useState('upi');
+
+  const handlePayment = () => {
+    if (!selectedMethod) {
+      Alert.alert('Please select a payment method');
+      return;
+    }
+
+    Alert.alert('Payment Successful', `Paid ₹${total} via ${selectedMethod.toUpperCase()}`, [
+      { text: 'OK', onPress: () => router.replace('/') },
+    ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Payment</Text>
-      <View style={styles.summary}>
-        <Text style={styles.label}>Booking Dates:</Text>
-        <Text style={styles.value}>
-          {start ? new Date(start).toDateString() : ''} - {end ? new Date(end).toDateString() : ''}
-        </Text>
-        <Text style={styles.label}>Total Days:</Text>
-        <Text style={styles.value}>{days}</Text>
-        <Text style={styles.label}>Total Amount:</Text>
-        <Text style={styles.total}>₹{total}</Text>
+      <Text style={styles.title}>Choose Payment Method</Text>
+
+      <FlatList
+        data={paymentMethods}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.methodItem}
+            onPress={() => setSelectedMethod(item.id)}
+            activeOpacity={0.8}
+          >
+            {selectedMethod === item.id ? (
+              <CheckCircle2 size={20} color={Colors.success[600]} />
+            ) : (
+              <Circle size={20} color={Colors.neutral[400]} />
+            )}
+            <Text style={styles.methodText}>{item.name}</Text>
+          </TouchableOpacity>
+        )}
+      />
+
+      <View style={styles.footer}>
+        <View>
+          <Text style={styles.totalLabel}>Total Amount</Text>
+          <Text style={styles.totalAmount}>₹{total}</Text>
+        </View>
+        <TouchableOpacity style={styles.payButton} onPress={handlePayment}>
+          <Text style={styles.payButtonText}>Pay Now</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.payButton} onPress={handlePay}>
-        <Text style={styles.payButtonText}>Pay Now</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 32 },
-  summary: { marginBottom: 32, alignItems: 'center' },
-  label: { fontSize: 16, color: Colors.neutral[700], marginTop: 8 },
-  value: { fontSize: 16, color: Colors.neutral[900], marginBottom: 4 },
-  total: { fontSize: 22, fontWeight: 'bold', color: Colors.accent[700], marginTop: 8 },
-  payButton: {
-    backgroundColor: Colors.accent[600],
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: 200,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.neutral[50],
+    paddingTop: 20,
   },
-  payButtonText: { color: Colors.white, fontSize: 18, fontWeight: 'bold' },
+  title: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: Colors.neutral[900],
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  methodItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    elevation: 1,
+    gap: 10,
+  },
+  methodText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+    color: Colors.neutral[800],
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderColor: Colors.neutral[200],
+    backgroundColor: Colors.white,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    elevation: 20,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: Colors.neutral[500],
+    fontFamily: 'Inter-Regular',
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: Colors.neutral[900],
+  },
+  payButton: {
+    backgroundColor: Colors.success[600],
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  payButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
 });
+
