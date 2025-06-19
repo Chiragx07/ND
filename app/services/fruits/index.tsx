@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -59,6 +59,10 @@ const fruitsVendors = [
 export default function FruitsServiceScreen() {
   const [selectedFilter, setSelectedFilter] = useState('all');
 
+  const handleVendorSelect = useCallback((vendorId: string) => {
+    router.push({ pathname: '/services/fruits/selection', params: { vendorId } });
+  }, []);
+
   const filteredVendors = selectedFilter === 'all' 
     ? fruitsVendors 
     : selectedFilter === 'online' 
@@ -70,11 +74,10 @@ export default function FruitsServiceScreen() {
   const VendorCard = ({ vendor }: { vendor: typeof fruitsVendors[0] }) => (
     <TouchableOpacity
       style={styles.vendorCard}
-      onPress={() => router.push({ pathname: '/services/milk/vendor/[id]', params: { id: vendor.id } })}
+      onPress={() => handleVendorSelect(vendor.id)}
       activeOpacity={0.8}
     >
       <Image source={{ uri: vendor.image }} style={styles.vendorImage} />
-      
       <View style={styles.vendorInfo}>
         <View style={styles.vendorHeader}>
           <View>
@@ -110,18 +113,15 @@ export default function FruitsServiceScreen() {
           <MapPin size={14} color={Colors.neutral[500]} />
           <Text style={styles.locationText}>{vendor.area} • {vendor.distance}</Text>
         </View>
-
         <View style={styles.ratingRow}>
           <Star size={14} color={Colors.warning[500]} fill={Colors.warning[500]} />
           <Text style={styles.ratingText}>{vendor.rating}</Text>
           <Text style={styles.reviewText}>({vendor.reviewCount} reviews)</Text>
         </View>
-
         <View style={styles.specialtiesContainer}>
           <Apple size={14} color={Colors.accent[600]} />
           <Text style={styles.specialtiesText}>{vendor.specialties.join(', ')}</Text>
         </View>
-
         <View style={styles.vendorFooter}>
           <View>
             <Text style={styles.priceRange}>{vendor.priceRange}</Text>
@@ -150,7 +150,6 @@ export default function FruitsServiceScreen() {
           <Search size={24} color={Colors.neutral[600]} />
         </TouchableOpacity>
       </View>
-
       <View style={styles.filterContainer}>
         {['all', 'online', 'organic', 'offline'].map((filter) => (
           <TouchableOpacity
@@ -170,16 +169,13 @@ export default function FruitsServiceScreen() {
           <Filter size={16} color={Colors.neutral[600]} />
         </TouchableOpacity>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
           Fresh fruits and vegetables delivered from local farms and markets
         </Text>
-
         {filteredVendors.map((vendor) => (
           <VendorCard key={vendor.id} vendor={vendor} />
         ))}
-
         {filteredVendors.length === 0 && (
           <View style={styles.emptyState}>
             <Apple size={48} color={Colors.neutral[400]} />

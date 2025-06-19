@@ -7,6 +7,7 @@ export default function FruitsLayout() {
       <Stack.Screen name="vendor/[id]" />
       <Stack.Screen name="booking/[vendorId]" />
       <Stack.Screen name="payment" />
+      <Stack.Screen name="selection" />
     </Stack>
   );
 }

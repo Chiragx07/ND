@@ -73,7 +73,7 @@ export default function MaidServiceScreen() {
   const ServiceCard = ({ service }: { service: typeof maidServices[0] }) => (
     <TouchableOpacity
       style={styles.serviceCard}
-      onPress={() => router.push(`/services/maid/vendor/${service.id}`)}
+      onPress={() => router.push({ pathname: '/services/maid/booking/[vendorID]', params: { vendorID: service.id } })}
       activeOpacity={0.8}
     >
       <Image source={{ uri: service.image }} style={styles.serviceImage} />
@@ -91,7 +91,7 @@ export default function MaidServiceScreen() {
           </View>
           <View style={[
             styles.statusBadge,
-            { backgroundColor: service.isOnline ? Colors.success[50] : Colors.neutral[100] }
+            { backgroundColor: service.isOnline ? Colors.success[500] : Colors.neutral[100] }
           ]}>
             <View style={[
               styles.statusDot,
