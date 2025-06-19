@@ -48,10 +48,10 @@ const mockOrders = [
 ];
 
 const statusConfig = {
-  pending: { color: Colors.warning[600], bgColor: Colors.warning[50], icon: Clock, label: 'Pending' },
-  confirmed: { color: Colors.primary[600], bgColor: Colors.primary[50], icon: Package, label: 'Confirmed' },
-  delivered: { color: Colors.success[600], bgColor: Colors.success[50], icon: CheckCircle, label: 'Delivered' },
-  cancelled: { color: Colors.error[600], bgColor: Colors.error[50], icon: XCircle, label: 'Cancelled' },
+  pending: { color: Colors.warning[600], bgColor: Colors.warning[500], icon: Clock, label: 'Pending' },
+  confirmed: { color: Colors.primary[600], bgColor: Colors.primary[500], icon: Package, label: 'Confirmed' },
+  delivered: { color: Colors.success[600], bgColor: Colors.success[500], icon: CheckCircle, label: 'Delivered' },
+  cancelled: { color: Colors.error[600], bgColor: Colors.error[500], icon: XCircle, label: 'Cancelled' },
 };
 
 export default function OrdersScreen() {

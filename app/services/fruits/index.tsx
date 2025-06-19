@@ -70,7 +70,7 @@ export default function FruitsServiceScreen() {
   const VendorCard = ({ vendor }: { vendor: typeof fruitsVendors[0] }) => (
     <TouchableOpacity
       style={styles.vendorCard}
-      onPress={() => router.push(`/services/fruits/vendor/${vendor.id}`)}
+      onPress={() => router.push({ pathname: '/services/milk/vendor/[id]', params: { id: vendor.id } })}
       activeOpacity={0.8}
     >
       <Image source={{ uri: vendor.image }} style={styles.vendorImage} />
@@ -90,7 +90,7 @@ export default function FruitsServiceScreen() {
             )}
             <View style={[
               styles.statusBadge,
-              { backgroundColor: vendor.isOnline ? Colors.success[50] : Colors.neutral[100] }
+              { backgroundColor: vendor.isOnline ? Colors.success[500] : Colors.neutral[100] }
             ]}>
               <View style={[
                 styles.statusDot,
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   organicBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.success[50],
+    backgroundColor: Colors.success[500],
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
