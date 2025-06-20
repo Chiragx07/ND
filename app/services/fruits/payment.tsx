@@ -11,7 +11,7 @@ const paymentMethods = [
   { id: 'cash', name: 'Cash on Delivery', icon: <IndianRupee size={24} color={Colors.accent[700]} /> },
 ];
 
-export default function WaterPaymentScreen() {
+export default function FruitsPaymentScreen() {
   const { vendorId, start, end, days, total } = useLocalSearchParams<{
     vendorId: string;
     start: string;
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 19,
     fontFamily: 'Inter-Bold',
-    color: Colors.neutral[900],
+    color: Colors.accent[700],
     marginBottom: 24,
     textAlign: 'center',
   },

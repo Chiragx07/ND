@@ -1,195 +1,234 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, TextInput, Modal, Pressable, ScrollView, Image } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/colors';
-import { ArrowLeft, CreditCard, Smartphone, Wallet, Shield, CheckCircle } from 'lucide-react-native';
+import { Circle, CheckCircle2, CreditCard, IndianRupee, QrCode, Smartphone } from 'lucide-react-native';
 
 const paymentMethods = [
-  {
-    id: 'upi',
-    name: 'UPI',
-    description: 'Pay using UPI apps',
-    icon: Smartphone,
-    popular: true,
-  },
-  {
-    id: 'card',
-    name: 'Credit/Debit Card',
-    description: 'Visa, Mastercard, RuPay',
-    icon: CreditCard,
-    popular: false,
-  },
-  {
-    id: 'wallet',
-    name: 'Digital Wallet',
-    description: 'Paytm, PhonePe, Google Pay',
-    icon: Wallet,
-    popular: false,
-  },
+  { id: 'upi', name: 'UPI', icon: <Smartphone size={24} color={Colors.accent[700]} /> },
+  { id: 'card', name: 'Credit/Debit Card', icon: <CreditCard size={24} color={Colors.accent[700]} /> },
+  { id: 'cash', name: 'Cash on Delivery', icon: <IndianRupee size={24} color={Colors.accent[700]} /> },
 ];
 
-export default function PaymentScreen() {
-  const { bookingData } = useLocalSearchParams();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi');
-  const [processing, setProcessing] = useState(false);
+export default function MilkPaymentScreen() {
+  const { vendorId, start, end, days, total } = useLocalSearchParams<{
+    vendorId: string;
+    start: string;
+    end: string;
+    days: string;
+    total: string;
+  }>();
 
-  const booking = bookingData ? JSON.parse(bookingData as string) : null;
+  const [selectedMethod, setSelectedMethod] = useState('upi');
+  // Card modal state
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardError, setCardError] = useState('');
+  // UPI state
+  const [upiOption, setUpiOption] = useState<'id' | 'qr' | null>(null);
+  const [upiId, setUpiId] = useState('');
+  const [upiError, setUpiError] = useState('');
 
-  if (!booking) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text>Invalid booking data</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const handlePayment = async () => {
-    setProcessing(true);
-    
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Payment Successful!',
-        `Your ${booking.type} booking has been confirmed. The vendor will contact you shortly.`,
-        [
-          {
-            text: 'View Orders',
-            onPress: () => router.replace('/(tabs)/orders'),
-          },
-          {
-            text: 'Go Home',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Payment Failed', 'Please try again or use a different payment method.');
-    } finally {
-      setProcessing(false);
+  const handlePayment = () => {
+    if (!selectedMethod) {
+      Alert.alert('Please select a payment method');
+      return;
     }
+    if (selectedMethod === 'card') {
+      setShowCardModal(true);
+      return;
+    }
+    if (selectedMethod === 'upi') {
+      if (!upiOption) {
+        setUpiError('Please select UPI option');
+        return;
+      }
+      if (upiOption === 'id' && !upiId) {
+        setUpiError('Please enter your UPI ID');
+        return;
+      }
+      setUpiError('');
+      Alert.alert('Payment Successful', `Paid ₹${total} via UPI`, [
+        { text: 'OK', onPress: () => router.replace('/') },
+      ]);
+      return;
+    }
+    Alert.alert('Payment Successful', `Paid ₹${total} via ${selectedMethod.toUpperCase()}`, [
+      { text: 'OK', onPress: () => router.replace('/') },
+    ]);
+  };
+
+  const handleCardPay = () => {
+    if (!cardNumber || !cardHolder) {
+      setCardError('Please enter all card details');
+      return;
+    }
+    setCardError('');
+    setShowCardModal(false);
+    Alert.alert('Payment Successful', `Paid ₹${total} via CARD`, [
+      { text: 'OK', onPress: () => router.replace('/') },
+    ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color={Colors.neutral[700]} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Payment</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Text style={styles.title}>Choose Payment Method</Text>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Order Summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Order Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Service</Text>
-            <Text style={styles.summaryValue}>Fresh Cow Milk</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Quantity</Text>
-            <Text style={styles.summaryValue}>{booking.quantity}L</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Type</Text>
-            <Text style={styles.summaryValue}>
-              {booking.type === 'subscription' ? `${booking.frequency} subscription` : 'One-time'}
+      <FlatList
+        data={paymentMethods}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.methodItem,
+              selectedMethod === item.id && styles.methodItemSelected,
+            ]}
+            onPress={() => {
+              setSelectedMethod(item.id);
+              setUpiOption(null);
+              setUpiId('');
+              setUpiError('');
+            }}
+            activeOpacity={0.85}
+          >
+            <View style={styles.iconCircle}>
+              {item.icon}
+            </View>
+            <Text style={[
+              styles.methodText,
+              selectedMethod === item.id && styles.methodTextSelected,
+            ]}>
+              {item.name}
             </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>₹{booking.total}</Text>
-          </View>
-        </View>
+            <View style={{ flex: 1 }} />
+            {selectedMethod === item.id ? (
+              <CheckCircle2 size={22} color={Colors.success[600]} />
+            ) : (
+              <Circle size={22} color={Colors.neutral[400]} />
+            )}
+          </TouchableOpacity>
+        )}
+      />
 
-        {/* Payment Methods */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Payment Method</Text>
-          {paymentMethods.map((method) => {
-            const IconComponent = method.icon;
-            return (
-              <TouchableOpacity
-                key={method.id}
-                style={[
-                  styles.paymentMethod,
-                  selectedPaymentMethod === method.id && styles.selectedPaymentMethod
-                ]}
-                onPress={() => setSelectedPaymentMethod(method.id)}
-              >
-                <View style={styles.paymentMethodLeft}>
-                  <View style={styles.paymentMethodIcon}>
-                    <IconComponent size={24} color={Colors.primary[600]} />
-                  </View>
-                  <View style={styles.paymentMethodInfo}>
-                    <View style={styles.paymentMethodHeader}>
-                      <Text style={styles.paymentMethodName}>{method.name}</Text>
-                      {method.popular && (
-                        <View style={styles.popularBadge}>
-                          <Text style={styles.popularText}>Popular</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.paymentMethodDescription}>{method.description}</Text>
-                  </View>
-                </View>
-                <View style={[
-                  styles.radioButton,
-                  selectedPaymentMethod === method.id && styles.selectedRadioButton
-                ]}>
-                  {selectedPaymentMethod === method.id && (
-                    <View style={styles.radioButtonInner} />
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Security Info */}
-        <View style={styles.securityCard}>
-          <Shield size={20} color={Colors.success[600]} />
-          <View style={styles.securityInfo}>
-            <Text style={styles.securityTitle}>Secure Payment</Text>
-            <Text style={styles.securityDescription}>
-              Your payment information is encrypted and secure
-            </Text>
+      {/* UPI Options */}
+      {selectedMethod === 'upi' && (
+        <View style={styles.upiOptionsContainer}>
+          <Text style={styles.upiTitle}>UPI Options</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <TouchableOpacity
+              style={[
+                styles.upiOptionBtn,
+                upiOption === 'id' && styles.upiOptionBtnSelected,
+              ]}
+              onPress={() => setUpiOption('id')}
+            >
+              <Smartphone size={18} color={upiOption === 'id' ? Colors.white : Colors.accent[700]} style={{ marginRight: 6 }} />
+              <Text style={upiOption === 'id' ? styles.upiOptionTextSelected : styles.upiOptionText}>
+                Enter UPI ID
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.upiOptionBtn,
+                upiOption === 'qr' && styles.upiOptionBtnSelected,
+              ]}
+              onPress={() => setUpiOption('qr')}
+            >
+              <QrCode size={18} color={upiOption === 'qr' ? Colors.white : Colors.accent[700]} style={{ marginRight: 6 }} />
+              <Text style={upiOption === 'qr' ? styles.upiOptionTextSelected : styles.upiOptionText}>
+                Scan QR
+              </Text>
+            </TouchableOpacity>
           </View>
+          {upiOption === 'id' && (
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your UPI ID"
+              value={upiId}
+              onChangeText={setUpiId}
+              autoCapitalize="none"
+              placeholderTextColor={Colors.neutral[400]}
+            />
+          )}
+          {upiOption === 'qr' && (
+            <View style={{ alignItems: 'center', marginVertical: 12 }}>
+              <Image
+                source={{ uri: 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=yourupi@bank' }}
+                style={{ width: 180, height: 180, marginBottom: 8, borderRadius: 16, borderWidth: 2, borderColor: Colors.accent[200] }}
+              />
+              <Text style={{ color: Colors.neutral[600], fontSize: 14 }}>
+                Scan this QR with your UPI app
+              </Text>
+            </View>
+          )}
+          {upiError ? (
+            <Text style={{ color: 'red', marginTop: 4 }}>{upiError}</Text>
+          ) : null}
         </View>
-
-        {/* Terms */}
-        <Text style={styles.termsText}>
-          By proceeding, you agree to our Terms of Service and Privacy Policy. 
-          {booking.type === 'subscription' && ' You can cancel your subscription anytime from the app.'}
-        </Text>
-      </ScrollView>
+      )}
 
       <View style={styles.footer}>
-        <View style={styles.totalContainer}>
-          <Text style={styles.footerTotal}>₹{booking.total}</Text>
-          <Text style={styles.footerNote}>
-            {booking.type === 'subscription' ? `${booking.frequency} billing` : 'one-time payment'}
-          </Text>
+        <View>
+          <Text style={styles.totalLabel}>Total Amount</Text>
+          <Text style={styles.totalAmount}>₹{total}</Text>
         </View>
-        <TouchableOpacity
-          style={[styles.payButton, processing && styles.processingButton]}
-          onPress={handlePayment}
-          disabled={processing}
-        >
-          {processing ? (
-            <Text style={styles.payButtonText}>Processing...</Text>
-          ) : (
-            <Text style={styles.payButtonText}>Pay Now</Text>
-          )}
+        <TouchableOpacity style={styles.payButton} onPress={handlePayment}>
+          <Text style={styles.payButtonText}>Pay Now</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Card Payment Modal */}
+      <Modal
+        visible={showCardModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowCardModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <Text style={styles.modalTitle}>Enter Card Details</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Card Number"
+                keyboardType="number-pad"
+                value={cardNumber}
+                onChangeText={setCardNumber}
+                maxLength={16}
+                placeholderTextColor={Colors.neutral[400]}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Card Holder Name"
+                value={cardHolder}
+                onChangeText={setCardHolder}
+                autoCapitalize="words"
+                placeholderTextColor={Colors.neutral[400]}
+              />
+              {cardError ? (
+                <Text style={{ color: 'red', marginBottom: 8 }}>{cardError}</Text>
+              ) : null}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                <Pressable
+                  style={[styles.payButton, { backgroundColor: Colors.neutral[300], flex: 1, marginRight: 8 }]}
+                  onPress={() => setShowCardModal(false)}
+                >
+                  <Text style={[styles.payButtonText, { color: Colors.neutral[800] }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.payButton, { flex: 1, marginLeft: 8 }]}
+                  onPress={handleCardPay}
+                >
+                  <Text style={styles.payButtonText}>Pay</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -198,232 +237,170 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[50],
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: 'Inter-Bold',
-    color: Colors.neutral[900],
-  },
-  scrollContent: {
+    color: Colors.accent[700],
+    marginBottom: 24,
     paddingHorizontal: 20,
-    paddingBottom: 120,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  summaryCard: {
+  methodItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.white,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginBottom: 16,
     elevation: 2,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: Colors.neutral[900],
-    marginBottom: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: Colors.neutral[600],
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.neutral[900],
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.neutral[200],
-    marginVertical: 12,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: Colors.neutral[900],
-  },
-  totalValue: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: Colors.primary[600],
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: Colors.neutral[900],
-    marginBottom: 16,
-  },
-  paymentMethod: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    gap: 14,
     borderWidth: 2,
-    borderColor: Colors.neutral[200],
+    borderColor: Colors.white,
+    shadowColor: Colors.accent[200],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
-  selectedPaymentMethod: {
-    borderColor: Colors.primary[600],
-    backgroundColor: Colors.primary[50],
+  methodItemSelected: {
+    borderColor: Colors.accent[600],
+    backgroundColor: Colors.accent[50],
   },
-  paymentMethodLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  paymentMethodIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary[50],
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.accent[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  paymentMethodInfo: {
-    flex: 1,
-  },
-  paymentMethodHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  paymentMethodName: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.neutral[900],
     marginRight: 8,
   },
-  popularBadge: {
-    backgroundColor: Colors.success[500],
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+  methodText: {
+    fontSize: 17,
+    fontFamily: 'Inter-Medium',
+    color: Colors.neutral[800],
+    letterSpacing: 0.2,
   },
-  popularText: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.white,
+  methodTextSelected: {
+    color: Colors.accent[700],
+    fontFamily: 'Inter-Bold',
   },
-  paymentMethodDescription: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: Colors.neutral[500],
+  upiOptionsContainer: {
+    backgroundColor: Colors.white,
+    marginHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 18,
+    elevation: 2,
+    shadowColor: Colors.accent[200],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.neutral[300],
-    justifyContent: 'center',
-    alignItems: 'center',
+  upiTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: Colors.accent[700],
+    marginBottom: 12,
+    letterSpacing: 0.2,
   },
-  selectedRadioButton: {
-    borderColor: Colors.primary[600],
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary[600],
-  },
-  securityCard: {
+  upiOptionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.success[50],
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.accent[400],
+    borderRadius: 8,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    marginRight: 0,
   },
-  securityInfo: {
-    flex: 1,
+  upiOptionBtnSelected: {
+    backgroundColor: Colors.accent[600],
+    borderColor: Colors.accent[600],
   },
-  securityTitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.success[700],
-    marginBottom: 2,
+  upiOptionText: {
+    color: Colors.accent[700],
+    fontFamily: 'Inter-Medium',
+    fontSize: 15,
   },
-  securityDescription: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: Colors.success[600],
+  upiOptionTextSelected: {
+    color: Colors.white,
+    fontFamily: 'Inter-Bold',
+    fontSize: 15,
   },
-  termsText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: Colors.neutral[500],
-    lineHeight: 16,
-    textAlign: 'center',
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.accent[400],
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 16,
+    fontSize: 16,
+    backgroundColor: Colors.neutral[50],
   },
   footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 22,
+    paddingHorizontal: 24,
+    borderTopWidth: 1,
+    borderColor: Colors.neutral[200],
+    backgroundColor: Colors.white,
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Colors.white,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral[200],
-    flexDirection: 'row',
+    elevation: 20,
     alignItems: 'center',
-    gap: 16,
   },
-  totalContainer: {
-    flex: 1,
+  totalLabel: {
+    fontSize: 15,
+    color: Colors.neutral[500],
+    fontFamily: 'Inter-Regular',
   },
-  footerTotal: {
+  totalAmount: {
     fontSize: 20,
     fontFamily: 'Inter-Bold',
-    color: Colors.neutral[900],
-  },
-  footerNote: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: Colors.neutral[500],
+    color: Colors.accent[700],
+    marginTop: 2,
   },
   payButton: {
-    backgroundColor: Colors.primary[600],
+    backgroundColor: Colors.success[600],
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  processingButton: {
-    backgroundColor: Colors.neutral[400],
+    borderRadius: 10,
+    alignSelf: 'center',
+    elevation: 2,
   },
   payButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
     color: Colors.white,
+    fontSize: 17,
+    fontFamily: 'Inter-SemiBold',
+    letterSpacing: 0.2,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    padding: 28,
+    width: '88%',
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 19,
+    fontFamily: 'Inter-Bold',
+    color: Colors.neutral[900],
+    marginBottom: 24,
+    textAlign: 'center',
   },
 });
